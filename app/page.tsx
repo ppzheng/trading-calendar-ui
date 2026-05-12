@@ -35,47 +35,35 @@ export default function DashboardPage() {
           background: "radial-gradient(ellipse at center, rgba(52,211,153,0.09) 0%, transparent 68%)",
         }} />
 
-        {/* Floating blob A — large soft emerald, upper-left */}
-        <div style={{
-          position: "absolute",
-          top: "-60px",
-          left: "4%",
-          width: "480px",
-          height: "480px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(134,239,172,0.14) 0%, transparent 72%)",
-          filter: "blur(72px)",
-          willChange: "transform",
-          animation: "ambient-float-a 20s ease-in-out infinite",
-        }} />
+        {/* Floating blob A — upper-left. Animation controlled by CSS (disabled on mobile / reduced-motion). */}
+        <div
+          className="ambient-blob-a"
+          style={{
+            position: "absolute",
+            top: "-60px",
+            left: "4%",
+            width: "420px",
+            height: "420px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(134,239,172,0.10) 0%, transparent 72%)",
+            filter: "blur(40px)",
+          }}
+        />
 
-        {/* Floating blob B — medium teal-green, lower-right */}
-        <div style={{
-          position: "absolute",
-          bottom: "-50px",
-          right: "6%",
-          width: "420px",
-          height: "420px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(52,211,153,0.10) 0%, transparent 72%)",
-          filter: "blur(80px)",
-          willChange: "transform",
-          animation: "ambient-float-b 25s ease-in-out infinite",
-        }} />
-
-        {/* Floating blob C — small mint, center-right */}
-        <div style={{
-          position: "absolute",
-          top: "38%",
-          left: "58%",
-          width: "300px",
-          height: "300px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(167,243,208,0.09) 0%, transparent 72%)",
-          filter: "blur(60px)",
-          willChange: "transform",
-          animation: "ambient-float-c 17s ease-in-out infinite",
-        }} />
+        {/* Floating blob B — lower-right. Animation controlled by CSS. */}
+        <div
+          className="ambient-blob-b"
+          style={{
+            position: "absolute",
+            bottom: "-50px",
+            right: "6%",
+            width: "360px",
+            height: "360px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(52,211,153,0.07) 0%, transparent 72%)",
+            filter: "blur(48px)",
+          }}
+        />
 
         {/* Subtle dot-grid texture */}
         <div style={{

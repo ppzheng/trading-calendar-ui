@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useCallback, useState } from "react";
+import { memo, useMemo, useCallback, useState } from "react";
 import { Download } from "lucide-react";
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { SIGNAL_META } from "@/lib/mock-data";
@@ -9,17 +9,23 @@ import { useLocale } from "@/lib/locale";
 import { tradingPlanMay2026, TradingDay } from "@/data/tradingPlanMay2026";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const TODAY_STR = "2026-05-11";
+const TODAY_STR = "2026-05-12";
 
-// Grid starts Monday May 4 — May 5 (Tue) is the first active trading day.
-// 5 rows × 7 cols covers May 4 – June 7. Cells outside period are gray.
 const GRID_START = new Date(2026, 4, 4);
+
+const EXPORT_FONT = '-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",Arial,sans-serif';
+const EXPORT_C = {
+  trend:  { bg: "#E8F8F0", border: "#A7E8C4", text: "#047857" },
+  follow: { bg: "#FFF8E1", border: "#F6D365", text: "#B45309" },
+  adjust: { bg: "#EAF6FD", border: "#A7DDF7", text: "#0369A1" },
+  risk:   { bg: "#FDECEC", border: "#F5B5B5", text: "#BE123C" },
+} as const;
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// ── Light-themed signal tooltip ───────────────────────────────────────────────
+// ── Legend tooltip (Base UI) — kept only for the 4 legend items ──────────────
 
 function SignalTooltipWrap({ signal, children }: { signal: SignalType; children: React.ReactNode }) {
   const { locale } = useLocale();
@@ -43,43 +49,47 @@ function SignalTooltipWrap({ signal, children }: { signal: SignalType; children:
 
 // ── Calendar components ───────────────────────────────────────────────────────
 
-function SignalTag({ signal }: { signal: SignalType }) {
+// Signal tag uses a native `title` tooltip — zero React/DOM overhead,
+// invisible on touch devices (no hover), no z-index/overflow conflicts.
+const SignalTag = memo(function SignalTag({ signal }: { signal: SignalType }) {
   const { locale } = useLocale();
   const meta = SIGNAL_META[signal];
-  const label = tradingPlanMay2026.signalTypes[signal].label[locale];
+  const { label, tooltip } = tradingPlanMay2026.signalTypes[signal];
   return (
-    <SignalTooltipWrap signal={signal}>
-      <span className={`inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full border leading-none whitespace-nowrap ${meta.tagBg} ${meta.tagText} ${meta.tagBorder}`}>
-        {label}
-      </span>
-    </SignalTooltipWrap>
+    <span
+      className={`inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full border leading-none whitespace-nowrap ${meta.tagBg} ${meta.tagText} ${meta.tagBorder}`}
+      title={`${label[locale]}: ${tooltip[locale]}`}
+    >
+      {label[locale]}
+    </span>
   );
-}
+});
 
-function DayCell({ day, isToday }: { day: TradingDay; isToday: boolean }) {
+const DayCell = memo(function DayCell({ day, isToday }: { day: TradingDay; isToday: boolean }) {
   const { locale } = useLocale();
   const meta = SIGNAL_META[day.type];
   return (
     <div
       className={`
-        relative flex flex-col rounded-xl border p-2.5 min-h-[106px] overflow-hidden
+        calendar-day-card
+        relative flex flex-col rounded-[20px] border p-4 min-h-[132px] overflow-hidden
         transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] cursor-default
         ${meta.cellBg}
         ${isToday ? "ring-2 ring-emerald-500 ring-offset-1 border-emerald-300" : "border-gray-200/80"}
       `}
     >
-      <div className="flex items-start justify-between mb-1.5 shrink-0">
+      <div className="flex items-start justify-between gap-2 mb-1.5 shrink-0">
         <span className={`text-xl font-bold leading-none font-mono ${isToday ? "text-emerald-600" : "text-gray-800"}`}>
           {day.displayDate}
         </span>
-        <span className="text-[10px] font-medium text-gray-400 leading-none mt-0.5 font-mono">
+        <span className="ganzhi text-[13px] font-medium text-gray-400 leading-none mt-0.5 font-mono whitespace-nowrap">
           {day.ganzhi}
         </span>
       </div>
       <div className="mb-1.5 shrink-0">
         <SignalTag signal={day.type} />
       </div>
-      <p className="text-[9.5px] text-gray-500 leading-snug line-clamp-2 hidden sm:block">
+      <p className="text-[10px] text-gray-500 leading-snug line-clamp-2">
         {day.advice[locale]}
       </p>
       {isToday && (
@@ -87,15 +97,15 @@ function DayCell({ day, isToday }: { day: TradingDay; isToday: boolean }) {
       )}
     </div>
   );
-}
+});
 
-function GrayCell({ displayDate }: { displayDate: string }) {
+const GrayCell = memo(function GrayCell({ displayDate }: { displayDate: string }) {
   return (
-    <div className="flex flex-col rounded-xl border border-gray-100 bg-gray-50/60 p-2.5 min-h-[106px] opacity-35">
+    <div className="calendar-day-card flex flex-col rounded-[20px] border border-gray-100 bg-gray-50/60 p-4 min-h-[132px] opacity-35">
       <span className="text-xl font-bold leading-none font-mono text-gray-400">{displayDate}</span>
     </div>
   );
-}
+});
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
@@ -103,7 +113,6 @@ export function TradingCalendar() {
   const { locale } = useLocale();
   const { calendar, signalTypes } = tradingPlanMay2026;
 
-  const calendarRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const dayMap = useMemo(
@@ -132,107 +141,138 @@ export function TradingCalendar() {
     ? `${tradingPlanMay2026.period} · 癸巳月 · 每格显示干支、信号与操作建议`
     : `${tradingPlanMay2026.period} · Guisi Month · Each block shows ganzhi, signal, and trading advice`;
 
-  const downloadCalendarAsImage = useCallback(async () => {
-    if (!calendarRef.current || isDownloading) return;
+  const downloadCalendarAsImage = useCallback(() => {
+    if (isDownloading) return;
     setIsDownloading(true);
+
     try {
-      // dom-to-image-more uses SVG foreignObject → browser renders CSS natively,
-      // so oklch() colors and CSS variables work correctly (html2canvas does not support oklch).
-      const domtoimage = await import("dom-to-image-more");
-      const dataUrl = await domtoimage.toPng(calendarRef.current, {
-        bgcolor: "#ffffff",
-        scale: 2,
-        filter: (node: Node) =>
-          !(node instanceof HTMLElement && node.hasAttribute("data-html2canvas-ignore")),
-        onclone: (cloned: Element) => {
-          // Expand overflow so the full 640px grid is captured on narrow viewports
-          const scrollEl = cloned.querySelector("[data-calendar-scroll]") as HTMLElement | null;
-          if (scrollEl) scrollEl.style.overflow = "visible";
-        },
-      });
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = "trading-calendar-may-2026.png";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const flatCells = rows.flat();
+
+      const cellsHTML = flatCells.map(({ displayDate, day }) => {
+        if (!day) {
+          return `<div style="background:#F9FAFB;border:1px solid #F3F4F6;border-radius:8px;padding:10px;min-height:100px;opacity:0.4;"><span style="font-size:15px;font-weight:700;color:#9CA3AF;">${displayDate}</span></div>`;
+        }
+        const c = EXPORT_C[day.type];
+        const label = signalTypes[day.type].label[locale];
+        const advice = day.advice[locale];
+        return `<div style="background:${c.bg};border:1px solid ${c.border};border-radius:8px;padding:10px;min-height:100px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;"><span style="font-size:16px;font-weight:700;color:#111;">${day.displayDate}</span><span style="font-size:11px;color:#666;">${day.ganzhi}</span></div><div style="margin-bottom:5px;"><span style="display:inline-block;font-size:9px;font-weight:600;color:${c.text};background:white;border:1px solid ${c.border};border-radius:99px;padding:2px 6px;">${label}</span></div><p style="font-size:9.5px;color:#4B5563;line-height:1.4;margin:0;">${advice}</p></div>`;
+      }).join("");
+
+      const whdays = locale === "zh"
+        ? ["周一","周二","周三","周四","周五","周六","周日"]
+        : ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+      const weekdayHTML = whdays.map(d =>
+        `<div style="text-align:center;font-size:10px;font-weight:600;color:#6B7280;padding:6px 0;text-transform:uppercase;letter-spacing:0.05em;">${d}</div>`
+      ).join("");
+
+      const legendHTML = (["trend","follow","adjust","risk"] as SignalType[]).map(s => {
+        const c = EXPORT_C[s];
+        const count = counts[s] ?? 0;
+        return `<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:${c.text};display:inline-block;"></span><span style="font-size:11px;color:#374151;">${signalTypes[s].label[locale]}&nbsp;<b>${count}d</b></span></span>`;
+      }).join("");
+
+      const titleText = locale === "zh" ? "交易日历" : "Trading Calendar";
+      const footerText = locale === "zh" ? "仅供参考，不构成投资建议。" : "For reference only. Not investment advice.";
+
+      const html = `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><title>${titleText}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#fff;font-family:${EXPORT_FONT};}.g{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}@media print{@page{size:A4 landscape;margin:1.2cm;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body><div style="padding:28px;max-width:1100px;margin:0 auto;"><div style="margin-bottom:14px;"><div style="font-size:20px;font-weight:700;color:#111;">${titleText}</div><div style="font-size:12px;color:#555;margin-top:3px;">${tradingPlanMay2026.period} · 癸巳月 · 2026/5/5 — 2026/6/4</div></div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;padding:9px 13px;background:#F9FAFB;border-radius:8px;border:1px solid #E5E7EB;">${legendHTML}</div><div class="g" style="margin-bottom:4px;background:#F9FAFB;border-radius:6px;">${weekdayHTML}</div><div class="g">${cellsHTML}</div><div style="margin-top:14px;padding-top:10px;border-top:1px solid #E5E7EB;font-size:10px;color:#9CA3AF;">${footerText}</div></div><script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`;
+
+      const win = window.open("", "_blank", "width=1200,height=900,scrollbars=yes");
+      if (!win) {
+        alert(locale === "zh" ? "请允许浏览器弹出窗口以导出日历。" : "Please allow popups to export the calendar.");
+        return;
+      }
+      win.document.write(html);
+      win.document.close();
     } catch (err) {
-      console.error("[Calendar download]", err);
+      console.error("[Calendar export]", err);
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading]);
+  }, [isDownloading, locale, rows, counts, signalTypes]);
 
   return (
-    <div className="space-y-4" ref={calendarRef}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-gray-900">
-            {locale === "zh" ? "交易日历" : "Trading Calendar"}
-          </h2>
-          <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Legend with tooltips */}
-          <div className="hidden md:flex items-center gap-4">
-            {(["trend", "follow", "adjust", "risk"] as SignalType[]).map((sig) => {
-              const m = SIGNAL_META[sig];
-              return (
-                <SignalTooltipWrap key={sig} signal={sig}>
-                  <div className="flex items-center gap-1.5 cursor-default">
-                    <div className={`w-2 h-2 rounded-full ${m.dot}`} />
-                    <span className="text-[10px] text-gray-500">{signalTypes[sig].label[locale]}</span>
-                    <span className="text-[10px] font-semibold text-gray-700">{counts[sig] ?? 0}d</span>
-                  </div>
-                </SignalTooltipWrap>
-              );
-            })}
+    <div className="space-y-4">
+        {/* ── Header: title + legend + download ── */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold text-gray-900">
+              {locale === "zh" ? "交易日历" : "Trading Calendar"}
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5 leading-relaxed line-clamp-2">{subtitle}</p>
           </div>
 
-          {/* Divider (only when legend is visible) */}
-          <div className="hidden md:block w-px h-4 bg-gray-200" />
-
-          {/* Download button */}
-          <button
-            data-html2canvas-ignore
-            onClick={downloadCalendarAsImage}
-            disabled={isDownloading}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-gray-200 text-[11px] font-medium text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download size={11} className={isDownloading ? "animate-pulse" : ""} />
-            {isDownloading
-              ? (locale === "zh" ? "生成中..." : "Generating...")
-              : (locale === "zh" ? "下载日历" : "Download Calendar")}
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/70">
-          {WEEKDAYS.map((d, i) => (
-            <div key={d} className={`py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider ${i >= 5 ? "text-gray-400" : "text-gray-500"}`}>
-              {d}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Legend — desktop only, keeps Base UI tooltips (4 instances) */}
+            <div className="hidden md:flex items-center gap-4">
+              {(["trend", "follow", "adjust", "risk"] as SignalType[]).map((sig) => {
+                const m = SIGNAL_META[sig];
+                return (
+                  <SignalTooltipWrap key={sig} signal={sig}>
+                    <div className="flex items-center gap-1.5 cursor-default">
+                      <div className={`w-2 h-2 rounded-full ${m.dot}`} />
+                      <span className="text-[10px] text-gray-500">{signalTypes[sig].label[locale]}</span>
+                      <span className="text-[10px] font-semibold text-gray-700">{counts[sig] ?? 0}d</span>
+                    </div>
+                  </SignalTooltipWrap>
+                );
+              })}
             </div>
-          ))}
-        </div>
 
-        <div className="overflow-x-auto" data-calendar-scroll>
-          <div className="min-w-[640px] p-3 space-y-2">
-            {rows.map((row, ri) => (
-              <div key={ri} className="grid grid-cols-7 gap-2">
-                {row.map((cell, ci) =>
-                  cell.day ? (
-                    <DayCell key={ci} day={cell.day} isToday={cell.dateStr === TODAY_STR} />
-                  ) : (
-                    <GrayCell key={ci} displayDate={cell.displayDate} />
-                  )
-                )}
-              </div>
-            ))}
+            <div className="hidden md:block w-px h-4 bg-gray-200" />
+
+            {/* Download button */}
+            <button
+              onClick={downloadCalendarAsImage}
+              disabled={isDownloading}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download size={13} className={isDownloading ? "animate-pulse" : ""} />
+              <span className="hidden sm:inline">
+                {isDownloading
+                  ? (locale === "zh" ? "生成中..." : "Generating...")
+                  : (locale === "zh" ? "下载日历" : "Download Calendar")}
+              </span>
+              <span className="sm:hidden">
+                {isDownloading ? "..." : (locale === "zh" ? "下载" : "Save")}
+              </span>
+            </button>
           </div>
         </div>
-      </div>
+
+        {/* ── Calendar card ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+          <div className="overflow-x-auto" data-calendar-scroll>
+            <div className="min-w-[980px]">
+              {/* Weekday header — inside scroll so it tracks with the grid on mobile */}
+              <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/70">
+                {WEEKDAYS.map((d, i) => (
+                  <div
+                    key={d}
+                    className={`py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider ${i >= 5 ? "text-gray-400" : "text-gray-500"}`}
+                  >
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Grid rows */}
+              <div className="p-3 space-y-2 calendar-grid">
+                {rows.map((row, ri) => (
+                  <div key={ri} className="grid grid-cols-7 gap-2">
+                    {row.map((cell, ci) =>
+                      cell.day ? (
+                        <DayCell key={ci} day={cell.day} isToday={cell.dateStr === TODAY_STR} />
+                      ) : (
+                        <GrayCell key={ci} displayDate={cell.displayDate} />
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
     </div>
   );
 }
+

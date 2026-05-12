@@ -29,7 +29,7 @@ export function Header() {
 
   return (
     <>
-      <header className="bg-white/90 backdrop-blur-sm border-b border-gray-100 shrink-0">
+      <header className="bg-white border-b border-gray-100 shrink-0">
         <div className="max-w-[1450px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4 flex-wrap">
           {/* Left: brand + title */}
           <div className="flex items-center gap-2.5 shrink-0">

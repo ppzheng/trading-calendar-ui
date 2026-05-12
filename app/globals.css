@@ -92,6 +92,59 @@
   }
 }
 
+/* ── Calendar image capture ─────────────────────────────────────────────────── */
+
+/*
+  Applied to the calendar container just before html2canvas runs and removed
+  immediately after. Forces a reliable CJK font stack and strips transforms
+  that can confuse the canvas renderer on mobile.
+*/
+.capture-mode,
+.capture-mode * {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "PingFang SC",
+    "Microsoft YaHei",
+    "Noto Sans CJK SC",
+    "Source Han Sans SC",
+    sans-serif !important;
+  transform: none !important;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Preserve emoji rendering inside capture */
+.capture-mode .emoji,
+.capture-mode [data-emoji] {
+  font-family:
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Noto Color Emoji",
+    sans-serif !important;
+}
+
+/* Force full-width 7-column grid in the captured image */
+.capture-mode .calendar-grid {
+  width: 1200px !important;
+  min-width: 1200px !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+}
+
+.capture-mode .calendar-day-card {
+  min-height: 140px !important;
+}
+
+.capture-mode .ganzhi {
+  white-space: nowrap !important;
+  writing-mode: horizontal-tb !important;
+}
+
+/* Native-feel momentum scrolling on iOS for the calendar */
+[data-calendar-scroll] {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── Ambient background animations ─────────────────────────────────────────── */
 
 @keyframes ambient-float-a {
@@ -106,7 +159,30 @@
   70%       { transform: translate(12px, -10px) scale(0.98); }
 }
 
-@keyframes ambient-float-c {
-  0%, 100% { transform: translate(0px,  0px)  scale(1);    }
-  50%       { transform: translate(10px, 16px) scale(1.03); }
+/* Blob classes: animation + will-change live here so media queries can override them. */
+.ambient-blob-a {
+  will-change: transform;
+  animation: ambient-float-a 32s ease-in-out infinite;
+}
+.ambient-blob-b {
+  will-change: transform;
+  animation: ambient-float-b 44s ease-in-out infinite;
+}
+
+/* Disable blob animation on mobile — filter:blur is expensive on low-end GPUs. */
+@media (max-width: 767px) {
+  .ambient-blob-a,
+  .ambient-blob-b {
+    animation: none !important;
+    will-change: auto !important;
+  }
+}
+
+/* Respect the OS "reduce motion" preference. */
+@media (prefers-reduced-motion: reduce) {
+  .ambient-blob-a,
+  .ambient-blob-b {
+    animation: none !important;
+    will-change: auto !important;
+  }
 }

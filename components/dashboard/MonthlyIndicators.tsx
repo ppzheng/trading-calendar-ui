@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { SIGNAL_META } from "@/lib/mock-data";
 import { SignalType } from "@/lib/types";
 import { useLocale } from "@/lib/locale";
@@ -8,7 +8,7 @@ import { tradingPlanMay2026 } from "@/data/tradingPlanMay2026";
 
 // ── Radar chart (SVG pentagon) ────────────────────────────────────────────────
 
-function RadarChart() {
+const RadarChart = memo(function RadarChart() {
   const cx = 110, cy = 110, maxR = 80;
   const data = tradingPlanMay2026.radarData;
   const n = data.length;
@@ -54,7 +54,7 @@ function RadarChart() {
       </text>
     </svg>
   );
-}
+});
 
 // ── Horizontal metric bar ─────────────────────────────────────────────────────
 
