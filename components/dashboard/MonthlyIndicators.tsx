@@ -1,16 +1,15 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { SIGNAL_META } from "@/lib/mock-data";
 import { SignalType } from "@/lib/types";
 import { useLocale } from "@/lib/locale";
-import { tradingPlanMay2026 } from "@/data/tradingPlanMay2026";
+import { useTradingPlan } from "@/lib/trading-plan-context";
+import type { TradingPlan } from "@/data/tradingPlans";
 
 // ── Radar chart (SVG pentagon) ────────────────────────────────────────────────
 
-const RadarChart = memo(function RadarChart() {
+const RadarChart = memo(function RadarChart({ data }: { data: TradingPlan["radarData"] }) {
   const cx = 110, cy = 110, maxR = 80;
-  const data = tradingPlanMay2026.radarData;
   const n = data.length;
 
   const getXY = (i: number, r: number): [number, number] => {
@@ -84,16 +83,17 @@ function MetricBar({ label, value, description, isRisk = false }: { label: strin
 
 function SignalDistribution() {
   const { locale } = useLocale();
-  const { signalTypes } = tradingPlanMay2026;
+  const { plan } = useTradingPlan();
+  const { signalTypes } = plan;
 
   const counts = useMemo(() =>
-    tradingPlanMay2026.calendar.reduce(
+    plan.calendar.reduce(
       (acc, d) => { acc[d.type] = (acc[d.type] || 0) + 1; return acc; },
       {} as Record<SignalType, number>
-    ), []
+    ), [plan.calendar]
   );
 
-  const total = tradingPlanMay2026.calendar.length;
+  const total = plan.calendar.length;
 
   const segments: { signal: SignalType; dot: string }[] = [
     { signal: "trend",  dot: "bg-emerald-400" },
@@ -135,7 +135,8 @@ function SignalDistribution() {
 
 export function MonthlyIndicators() {
   const { locale } = useLocale();
-  const { monthlyTheme, signalBars, period, monthTitle } = tradingPlanMay2026;
+  const { plan } = useTradingPlan();
+  const { monthlyTheme, signalBars, period, monthTitle, cycleGanzhi } = plan;
 
   return (
     <div className="space-y-4">
@@ -149,7 +150,7 @@ export function MonthlyIndicators() {
           </p>
         </div>
         <span className="text-[10px] font-medium text-gray-400 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full">
-          {locale === "zh" ? "截至 5月11日" : "As of May 11"}
+          {locale === "zh" ? "月度周期" : "Cycle"}
         </span>
       </div>
 
@@ -161,7 +162,7 @@ export function MonthlyIndicators() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-gray-900">{monthlyTheme.keyword[locale]}</span>
               <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full font-medium">
-                癸巳月
+                {cycleGanzhi}月
               </span>
             </div>
             <p className="text-[11px] text-gray-500 leading-relaxed">{monthlyTheme.summary[locale]}</p>
@@ -209,7 +210,7 @@ export function MonthlyIndicators() {
           </div>
           <div className="flex-1 flex items-center justify-center min-h-[180px]">
             <div className="w-full max-w-[220px] aspect-square">
-              <RadarChart />
+              <RadarChart data={plan.radarData} />
             </div>
           </div>
         </div>

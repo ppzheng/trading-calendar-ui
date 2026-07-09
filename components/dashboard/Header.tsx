@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale";
-import { tradingPlanMay2026 } from "@/data/tradingPlanMay2026";
+import { useTradingPlan } from "@/lib/trading-plan-context";
+import type { TradingPlanId } from "@/data/tradingPlans";
 import { personalProfile } from "@/data/analysisData";
 import { DestinyModal } from "@/components/dashboard/DestinyModal";
 import { FiveElementsModal } from "@/components/dashboard/FiveElementsModal";
@@ -16,9 +17,9 @@ const BADGE_STYLES = [
 
 export function Header() {
   const { locale, setLocale } = useLocale();
+  const { plan, plans, selectedPlanId, setSelectedPlanId } = useTradingPlan();
   const [destinyOpen, setDestinyOpen] = useState(false);
   const [fiveElementsOpen, setFiveElementsOpen] = useState(false);
-  const plan = tradingPlanMay2026;
 
   const badges = [
     personalProfile.dayMaster[locale],
@@ -26,6 +27,10 @@ export function Header() {
     personalProfile.tradingPersona[locale],
     personalProfile.month[locale],
   ];
+
+  useEffect(() => {
+    document.title = `${plan.monthTitle.en} · Trading Plan`;
+  }, [plan.monthTitle.en]);
 
   return (
     <>
@@ -43,7 +48,7 @@ export function Header() {
             </div>
             <div className="hidden sm:block">
               <div className="text-sm font-semibold text-gray-900 leading-none tracking-tight">
-                {plan.title[locale]} · <span className="text-emerald-700">癸巳月</span>
+                {plan.title[locale]} · <span className="text-emerald-700">{plan.cycleGanzhi}月</span>
               </div>
               <div className="text-[11px] text-gray-400 mt-0.5 leading-none tracking-wide">
                 {plan.period} · 丙午年
@@ -53,6 +58,26 @@ export function Header() {
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {/* Month selector */}
+          <label className="flex items-center gap-1.5 shrink-0">
+            <span className="hidden md:inline text-[11px] font-medium text-gray-400">
+              {locale === "zh" ? "月份" : "Month"}
+            </span>
+            <select
+              value={selectedPlanId}
+              onChange={(event) => setSelectedPlanId(event.target.value as TradingPlanId)}
+              data-month-selector
+              className="h-8 max-w-[140px] sm:max-w-none rounded-xl border border-emerald-100 bg-emerald-50/70 px-2.5 text-[11px] font-semibold text-emerald-700 outline-none transition-colors hover:border-emerald-200 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+              aria-label={locale === "zh" ? "选择交易月份" : "Select trading month"}
+            >
+              {plans.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.selectorLabel[locale]}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {/* Avatar */}
           <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-orange-100 to-amber-50 border border-orange-200/70 flex items-center justify-center shrink-0 shadow-sm">

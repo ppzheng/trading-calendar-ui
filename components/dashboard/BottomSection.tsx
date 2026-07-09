@@ -1,18 +1,19 @@
 "use client";
 
 import { useLocale } from "@/lib/locale";
-import { tradingPlanMay2026 } from "@/data/tradingPlanMay2026";
+import { useTradingPlan } from "@/lib/trading-plan-context";
 
 export function BottomSection() {
   const { locale } = useLocale();
-  const { bestWindows, riskWindows, strategy, suggestions } = tradingPlanMay2026;
+  const { plan } = useTradingPlan();
+  const { bestWindows, riskWindows, strategy, suggestions, cycleGanzhi } = plan;
 
   const joiner = locale === "zh" ? "、" : ", ";
 
   // Expand risk window into one row per date
   const riskItems = riskWindows.flatMap((w) =>
     w.dates.map((date) => {
-      const day = tradingPlanMay2026.calendar.find((d) => d.displayDate === date);
+      const day = plan.calendar.find((d) => d.displayDate === date);
       return {
         date,
         reason: w.reason[locale],
@@ -29,8 +30,8 @@ export function BottomSection() {
         </h2>
         <p className="text-[11px] text-gray-400 mt-0.5">
           {locale === "zh"
-            ? "癸巳月交易窗口、风险提示与操作建议"
-            : "Trading windows, risk alerts, and suggestions for Guisi month"}
+            ? `${cycleGanzhi}月交易窗口、风险提示与操作建议`
+            : `Trading windows, risk alerts, and suggestions for ${cycleGanzhi} month`}
         </p>
       </div>
 
@@ -94,7 +95,7 @@ export function BottomSection() {
               {locale === "zh" ? "注意事项" : "Risk Factors"}
             </p>
             <div className="flex flex-wrap gap-1">
-              {riskWindows[0].risks.map((r, i) => (
+              {(riskWindows[0]?.risks ?? []).map((r, i) => (
                 <span key={i} className="text-[10px] text-rose-500 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-full">
                   {r[locale]}
                 </span>

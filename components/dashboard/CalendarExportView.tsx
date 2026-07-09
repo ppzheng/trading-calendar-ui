@@ -3,13 +3,13 @@
 import { useMemo } from "react";
 import { useLocale } from "@/lib/locale";
 import { SignalType } from "@/lib/types";
-import { tradingPlanMay2026 } from "@/data/tradingPlanMay2026";
+import { useTradingPlan } from "@/lib/trading-plan-context";
+import type { TradingPlan } from "@/data/tradingPlans";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const TODAY_STR = "2026-05-11";
-const GRID_START = new Date(2026, 4, 4);
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // All colors are plain hex/rgba — no oklch, no CSS variables, no Tailwind tokens.
 const COLORS: Record<SignalType, {
@@ -30,6 +30,40 @@ function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function fromDateStr(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function buildCalendarRows(calendar: TradingPlan["calendar"]) {
+  const first = fromDateStr(calendar[0].date);
+  const last = fromDateStr(calendar[calendar.length - 1].date);
+  const gridStart = new Date(first);
+  gridStart.setDate(first.getDate() - first.getDay());
+  const gridEnd = new Date(last);
+  gridEnd.setDate(last.getDate() + (6 - last.getDay()));
+
+  const dayMap = new Map(calendar.map((d) => [d.date, d]));
+  const cells: {
+    dateStr: string;
+    displayDate: string;
+    day: TradingPlan["calendar"][number] | null;
+  }[] = [];
+
+  for (const d = new Date(gridStart); d <= gridEnd; d.setDate(d.getDate() + 1)) {
+    const dateStr = toDateStr(d);
+    cells.push({
+      dateStr,
+      displayDate: `${d.getMonth() + 1}/${d.getDate()}`,
+      day: dayMap.get(dateStr) ?? null,
+    });
+  }
+
+  const result: typeof cells[] = [];
+  for (let i = 0; i < cells.length; i += 7) result.push(cells.slice(i, i + 7));
+  return result;
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -38,28 +72,10 @@ interface Props {
 
 export function CalendarExportView({ exportRef }: Props) {
   const { locale } = useLocale();
-  const { calendar, signalTypes, period } = tradingPlanMay2026;
+  const { plan } = useTradingPlan();
+  const { calendar, signalTypes, period, cycleGanzhi } = plan;
 
-  const dayMap = useMemo(
-    () => new Map(calendar.map((d) => [d.date, d])),
-    [calendar]
-  );
-
-  const rows = useMemo(() => {
-    const cells = Array.from({ length: 35 }, (_, i) => {
-      const d = new Date(GRID_START);
-      d.setDate(d.getDate() + i);
-      const dateStr = toDateStr(d);
-      return {
-        dateStr,
-        displayDate: `${d.getMonth() + 1}/${d.getDate()}`,
-        day: dayMap.get(dateStr) ?? null,
-      };
-    });
-    const result: typeof cells[] = [];
-    for (let i = 0; i < 35; i += 7) result.push(cells.slice(i, i + 7));
-    return result;
-  }, [dayMap]);
+  const rows = useMemo(() => buildCalendarRows(calendar), [calendar]);
 
   const counts = useMemo(
     () =>
@@ -112,7 +128,7 @@ export function CalendarExportView({ exportRef }: Props) {
           }}>
             {locale === "zh" ? "交易日历" : "Trading Calendar"}
             {" · "}
-            <span style={{ color: "#059669" }}>癸巳月</span>
+            <span style={{ color: "#059669" }}>{cycleGanzhi}月</span>
           </div>
           <div style={{
             fontSize: "11px",
@@ -176,7 +192,7 @@ export function CalendarExportView({ exportRef }: Props) {
               fontWeight: "600",
               textTransform: "uppercase",
               letterSpacing: "0.07em",
-              color: i >= 5 ? "#9CA3AF" : "#6B7280",
+              color: i === 0 || i === 6 ? "#9CA3AF" : "#6B7280",
               fontFamily: BASE_FONT,
             }}>
               {day}

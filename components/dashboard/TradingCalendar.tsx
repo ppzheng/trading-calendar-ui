@@ -6,12 +6,11 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { SIGNAL_META } from "@/lib/mock-data";
 import { SignalType } from "@/lib/types";
 import { useLocale } from "@/lib/locale";
-import { tradingPlanMay2026, TradingDay } from "@/data/tradingPlanMay2026";
+import { useTradingPlan } from "@/lib/trading-plan-context";
+import type { TradingPlan } from "@/data/tradingPlans";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const TODAY_STR = "2026-05-12";
-
-const GRID_START = new Date(2026, 4, 4);
 
 const EXPORT_FONT = '-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",Arial,sans-serif';
 const EXPORT_C = {
@@ -21,15 +20,48 @@ const EXPORT_C = {
   risk:   { bg: "#FDECEC", border: "#F5B5B5", text: "#BE123C" },
 } as const;
 
+type TradingDay = TradingPlan["calendar"][number];
+
+function fromDateStr(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function buildCalendarRows(calendar: TradingDay[]) {
+  const first = fromDateStr(calendar[0].date);
+  const last = fromDateStr(calendar[calendar.length - 1].date);
+  const gridStart = new Date(first);
+  gridStart.setDate(first.getDate() - first.getDay());
+
+  const gridEnd = new Date(last);
+  gridEnd.setDate(last.getDate() + (6 - last.getDay()));
+
+  const dayMap = new Map(calendar.map((d) => [d.date, d]));
+  const cells: { dateStr: string; displayDate: string; day: TradingDay | null }[] = [];
+  for (const d = new Date(gridStart); d <= gridEnd; d.setDate(d.getDate() + 1)) {
+    const dateStr = toDateStr(d);
+    cells.push({
+      dateStr,
+      displayDate: `${d.getMonth() + 1}/${d.getDate()}`,
+      day: dayMap.get(dateStr) ?? null,
+    });
+  }
+
+  const rows: typeof cells[] = [];
+  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+  return rows;
 }
 
 // ── Legend tooltip (Base UI) — kept only for the 4 legend items ──────────────
 
 function SignalTooltipWrap({ signal, children }: { signal: SignalType; children: React.ReactNode }) {
   const { locale } = useLocale();
-  const { label, tooltip } = tradingPlanMay2026.signalTypes[signal];
+  const { plan } = useTradingPlan();
+  const { label, tooltip } = plan.signalTypes[signal];
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger render={<span />} className="cursor-default">
@@ -53,8 +85,9 @@ function SignalTooltipWrap({ signal, children }: { signal: SignalType; children:
 // invisible on touch devices (no hover), no z-index/overflow conflicts.
 const SignalTag = memo(function SignalTag({ signal }: { signal: SignalType }) {
   const { locale } = useLocale();
+  const { plan } = useTradingPlan();
   const meta = SIGNAL_META[signal];
-  const { label, tooltip } = tradingPlanMay2026.signalTypes[signal];
+  const { label, tooltip } = plan.signalTypes[signal];
   return (
     <span
       className={`inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full border leading-none whitespace-nowrap ${meta.tagBg} ${meta.tagText} ${meta.tagBorder}`}
@@ -70,6 +103,8 @@ const DayCell = memo(function DayCell({ day, isToday }: { day: TradingDay; isTod
   const meta = SIGNAL_META[day.type];
   return (
     <div
+      data-date={day.date}
+      data-signal={day.type}
       className={`
         calendar-day-card
         relative flex flex-col rounded-[20px] border p-4 min-h-[132px] overflow-hidden
@@ -111,26 +146,12 @@ const GrayCell = memo(function GrayCell({ displayDate }: { displayDate: string }
 
 export function TradingCalendar() {
   const { locale } = useLocale();
-  const { calendar, signalTypes } = tradingPlanMay2026;
+  const { plan } = useTradingPlan();
+  const { calendar, signalTypes, period, cycleGanzhi } = plan;
 
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const dayMap = useMemo(
-    () => new Map(calendar.map((d) => [d.date, d])),
-    [calendar]
-  );
-
-  const rows: { dateStr: string; displayDate: string; day: TradingDay | null }[][] = useMemo(() => {
-    const cells = Array.from({ length: 35 }, (_, i) => {
-      const d = new Date(GRID_START);
-      d.setDate(d.getDate() + i);
-      const dateStr = toDateStr(d);
-      return { dateStr, displayDate: `${d.getMonth() + 1}/${d.getDate()}`, day: dayMap.get(dateStr) ?? null };
-    });
-    const result = [];
-    for (let i = 0; i < 35; i += 7) result.push(cells.slice(i, i + 7));
-    return result;
-  }, [dayMap]);
+  const rows = useMemo(() => buildCalendarRows(calendar), [calendar]);
 
   const counts = useMemo(
     () => calendar.reduce((acc, d) => { acc[d.type] = (acc[d.type] || 0) + 1; return acc; }, {} as Record<SignalType, number>),
@@ -138,8 +159,8 @@ export function TradingCalendar() {
   );
 
   const subtitle = locale === "zh"
-    ? `${tradingPlanMay2026.period} · 癸巳月 · 每格显示干支、信号与操作建议`
-    : `${tradingPlanMay2026.period} · Guisi Month · Each block shows ganzhi, signal, and trading advice`;
+    ? `${period} · ${cycleGanzhi}月 · 每格显示干支、信号与操作建议`
+    : `${period} · ${cycleGanzhi} Month · Each block shows ganzhi, signal, and trading advice`;
 
   const downloadCalendarAsImage = useCallback(() => {
     if (isDownloading) return;
@@ -159,8 +180,8 @@ export function TradingCalendar() {
       }).join("");
 
       const whdays = locale === "zh"
-        ? ["周一","周二","周三","周四","周五","周六","周日"]
-        : ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+        ? ["周日","周一","周二","周三","周四","周五","周六"]
+        : WEEKDAYS;
       const weekdayHTML = whdays.map(d =>
         `<div style="text-align:center;font-size:10px;font-weight:600;color:#6B7280;padding:6px 0;text-transform:uppercase;letter-spacing:0.05em;">${d}</div>`
       ).join("");
@@ -174,7 +195,7 @@ export function TradingCalendar() {
       const titleText = locale === "zh" ? "交易日历" : "Trading Calendar";
       const footerText = locale === "zh" ? "仅供参考，不构成投资建议。" : "For reference only. Not investment advice.";
 
-      const html = `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><title>${titleText}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#fff;font-family:${EXPORT_FONT};}.g{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}@media print{@page{size:A4 landscape;margin:1.2cm;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body><div style="padding:28px;max-width:1100px;margin:0 auto;"><div style="margin-bottom:14px;"><div style="font-size:20px;font-weight:700;color:#111;">${titleText}</div><div style="font-size:12px;color:#555;margin-top:3px;">${tradingPlanMay2026.period} · 癸巳月 · 2026/5/5 — 2026/6/4</div></div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;padding:9px 13px;background:#F9FAFB;border-radius:8px;border:1px solid #E5E7EB;">${legendHTML}</div><div class="g" style="margin-bottom:4px;background:#F9FAFB;border-radius:6px;">${weekdayHTML}</div><div class="g">${cellsHTML}</div><div style="margin-top:14px;padding-top:10px;border-top:1px solid #E5E7EB;font-size:10px;color:#9CA3AF;">${footerText}</div></div><script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`;
+      const html = `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><title>${titleText}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#fff;font-family:${EXPORT_FONT};}.g{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}@media print{@page{size:A4 landscape;margin:1.2cm;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body><div style="padding:28px;max-width:1100px;margin:0 auto;"><div style="margin-bottom:14px;"><div style="font-size:20px;font-weight:700;color:#111;">${titleText}</div><div style="font-size:12px;color:#555;margin-top:3px;">${period} · ${cycleGanzhi}月</div></div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;padding:9px 13px;background:#F9FAFB;border-radius:8px;border:1px solid #E5E7EB;">${legendHTML}</div><div class="g" style="margin-bottom:4px;background:#F9FAFB;border-radius:6px;">${weekdayHTML}</div><div class="g">${cellsHTML}</div><div style="margin-top:14px;padding-top:10px;border-top:1px solid #E5E7EB;font-size:10px;color:#9CA3AF;">${footerText}</div></div><script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`;
 
       const win = window.open("", "_blank", "width=1200,height=900,scrollbars=yes");
       if (!win) {
@@ -188,7 +209,7 @@ export function TradingCalendar() {
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading, locale, rows, counts, signalTypes]);
+  }, [isDownloading, locale, rows, counts, signalTypes, period, cycleGanzhi]);
 
   return (
     <div className="space-y-4">
@@ -224,6 +245,7 @@ export function TradingCalendar() {
             <button
               onClick={downloadCalendarAsImage}
               disabled={isDownloading}
+              data-calendar-export
               className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download size={13} className={isDownloading ? "animate-pulse" : ""} />
@@ -248,7 +270,7 @@ export function TradingCalendar() {
                 {WEEKDAYS.map((d, i) => (
                   <div
                     key={d}
-                    className={`py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider ${i >= 5 ? "text-gray-400" : "text-gray-500"}`}
+                    className={`py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider ${i === 0 || i === 6 ? "text-gray-400" : "text-gray-500"}`}
                   >
                     {d}
                   </div>
@@ -275,4 +297,3 @@ export function TradingCalendar() {
     </div>
   );
 }
-
