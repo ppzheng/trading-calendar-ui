@@ -5,12 +5,11 @@ import { Download } from "lucide-react";
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { SIGNAL_META } from "@/lib/mock-data";
 import { SignalType } from "@/lib/types";
-import { useLocale } from "@/lib/locale";
+import { dashboardText, useLocale } from "@/lib/locale";
 import { useTradingPlan } from "@/lib/trading-plan-context";
 import type { TradingPlan } from "@/data/tradingPlans";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const TODAY_STR = "2026-05-12";
 
 const EXPORT_FONT = '-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",Arial,sans-serif';
 const EXPORT_C = {
@@ -146,10 +145,12 @@ const GrayCell = memo(function GrayCell({ displayDate }: { displayDate: string }
 
 export function TradingCalendar() {
   const { locale } = useLocale();
-  const { plan } = useTradingPlan();
+  const { plan, selectedPlanContainsToday, todayDateString } = useTradingPlan();
   const { calendar, signalTypes, period, cycleGanzhi } = plan;
 
   const [isDownloading, setIsDownloading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const text = dashboardText;
 
   const rows = useMemo(() => buildCalendarRows(calendar), [calendar]);
 
@@ -165,6 +166,7 @@ export function TradingCalendar() {
   const downloadCalendarAsImage = useCallback(() => {
     if (isDownloading) return;
     setIsDownloading(true);
+    setExportError(null);
 
     try {
       const flatCells = rows.flat();
@@ -199,17 +201,18 @@ export function TradingCalendar() {
 
       const win = window.open("", "_blank", "width=1200,height=900,scrollbars=yes");
       if (!win) {
-        alert(locale === "zh" ? "请允许浏览器弹出窗口以导出日历。" : "Please allow popups to export the calendar.");
+        setExportError(text.exportPopupBlocked[locale]);
         return;
       }
       win.document.write(html);
       win.document.close();
     } catch (err) {
       console.error("[Calendar export]", err);
+      setExportError(text.exportFailed[locale]);
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading, locale, rows, counts, signalTypes, period, cycleGanzhi]);
+  }, [isDownloading, locale, rows, counts, signalTypes, period, cycleGanzhi, text]);
 
   return (
     <div className="space-y-4">
@@ -261,6 +264,31 @@ export function TradingCalendar() {
           </div>
         </div>
 
+        {exportError && (
+          <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-700">
+            {exportError}
+          </div>
+        )}
+
+        <div className="md:hidden rounded-xl border border-gray-100 bg-white p-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-semibold text-gray-500">{text.signalGuide[locale]}</span>
+            <span className="text-[10px] text-gray-400">{text.scrollHint[locale]}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {(["trend", "follow", "adjust", "risk"] as SignalType[]).map((sig) => {
+              const meta = SIGNAL_META[sig];
+              const signal = signalTypes[sig];
+              return (
+                <div key={sig} className={`rounded-lg border ${meta.tagBorder} ${meta.tagBg} px-2 py-1.5`}>
+                  <div className={`text-[10px] font-semibold ${meta.tagText}`}>{signal.label[locale]}</div>
+                  <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{signal.advice[locale]}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* ── Calendar card ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
           <div className="overflow-x-auto" data-calendar-scroll>
@@ -283,7 +311,7 @@ export function TradingCalendar() {
                   <div key={ri} className="grid grid-cols-7 gap-2">
                     {row.map((cell, ci) =>
                       cell.day ? (
-                        <DayCell key={ci} day={cell.day} isToday={cell.dateStr === TODAY_STR} />
+                        <DayCell key={ci} day={cell.day} isToday={selectedPlanContainsToday && cell.dateStr === todayDateString} />
                       ) : (
                         <GrayCell key={ci} displayDate={cell.displayDate} />
                       )

@@ -37,7 +37,10 @@ export function BottomSection() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Best Windows */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-5 space-y-4">
+        <div
+          id="best-trading-windows"
+          className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-5 space-y-4 scroll-mt-4"
+        >
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
             <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -70,7 +73,10 @@ export function BottomSection() {
         </div>
 
         {/* Risk Windows */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-5 space-y-4">
+        <div
+          id="high-risk-days"
+          className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-5 space-y-4 scroll-mt-4"
+        >
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-rose-500" />
             <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">

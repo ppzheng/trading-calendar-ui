@@ -1,4 +1,5 @@
 import { Header } from "@/components/dashboard/Header";
+import { CurrentFocusPanel } from "@/components/dashboard/CurrentFocusPanel";
 import { MonthlyIndicators } from "@/components/dashboard/MonthlyIndicators";
 import { TradingCalendar } from "@/components/dashboard/TradingCalendar";
 import { BottomSection } from "@/components/dashboard/BottomSection";
@@ -78,6 +79,7 @@ export default function DashboardPage() {
       <div className="relative" style={{ zIndex: 1 }}>
         <Header />
         <main className="max-w-[1450px] mx-auto px-4 sm:px-6 py-6 space-y-6 pb-12">
+          <CurrentFocusPanel />
           <MonthlyIndicators />
           <TradingCalendar />
           <BottomSection />

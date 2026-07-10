@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLocale } from "@/lib/locale";
+import { dashboardText, useLocale } from "@/lib/locale";
 import { useTradingPlan } from "@/lib/trading-plan-context";
 import type { TradingPlanId } from "@/data/tradingPlans";
 import { personalProfile } from "@/data/analysisData";
@@ -20,13 +20,15 @@ export function Header() {
   const { plan, plans, selectedPlanId, setSelectedPlanId } = useTradingPlan();
   const [destinyOpen, setDestinyOpen] = useState(false);
   const [fiveElementsOpen, setFiveElementsOpen] = useState(false);
+  const cycleBadge = locale === "zh" ? `${plan.cycleGanzhi}月` : `${plan.cycleGanzhi} Month`;
 
   const badges = [
     personalProfile.dayMaster[locale],
     personalProfile.destinyType[locale],
     personalProfile.tradingPersona[locale],
-    personalProfile.month[locale],
+    cycleBadge,
   ];
+  const text = dashboardText;
 
   useEffect(() => {
     document.title = `${plan.monthTitle.en} · Trading Plan`;
@@ -79,6 +81,14 @@ export function Header() {
             </select>
           </label>
 
+          <div
+            aria-live="polite"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-100 text-[11px] font-medium text-gray-500 shrink-0"
+          >
+            <span>{text.selectedMonth[locale]}</span>
+            <span className="font-semibold text-gray-800">{plan.selectorLabel[locale]}</span>
+          </div>
+
           {/* Avatar */}
           <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-orange-100 to-amber-50 border border-orange-200/70 flex items-center justify-center shrink-0 shadow-sm">
             <span className="text-[12px] sm:text-[13px] font-semibold text-orange-600 leading-none">丁</span>
@@ -103,17 +113,27 @@ export function Header() {
           <div className="hidden lg:flex items-center gap-2">
             <button
               onClick={() => setDestinyOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-gray-200 text-[11px] font-medium text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-medium transition-colors ${
+                destinyOpen
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : "border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700"
+              }`}
             >
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
               {locale === "zh" ? "八字分析" : "Destiny"}
+              {destinyOpen && <span className="text-[10px] text-emerald-600">{text.modalActive[locale]}</span>}
             </button>
             <button
               onClick={() => setFiveElementsOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-gray-200 text-[11px] font-medium text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-medium transition-colors ${
+                fiveElementsOpen
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : "border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700"
+              }`}
             >
               <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
               {locale === "zh" ? "五行分析" : "Five Elements"}
+              {fiveElementsOpen && <span className="text-[10px] text-emerald-600">{text.modalActive[locale]}</span>}
             </button>
           </div>
 
@@ -166,14 +186,22 @@ export function Header() {
             <div className="sm:hidden w-px h-3 bg-gray-200 shrink-0" />
             <button
               onClick={() => setDestinyOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-gray-200 text-[11px] font-medium text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors whitespace-nowrap shrink-0"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-medium transition-colors whitespace-nowrap shrink-0 ${
+                destinyOpen
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : "border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700"
+              }`}
             >
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
               {locale === "zh" ? "八字分析" : "Destiny"}
             </button>
             <button
               onClick={() => setFiveElementsOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-gray-200 text-[11px] font-medium text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors whitespace-nowrap shrink-0"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-medium transition-colors whitespace-nowrap shrink-0 ${
+                fiveElementsOpen
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : "border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700"
+              }`}
             >
               <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
               {locale === "zh" ? "五行分析" : "Five Elements"}

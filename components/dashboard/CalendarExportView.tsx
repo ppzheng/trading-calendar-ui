@@ -8,7 +8,6 @@ import type { TradingPlan } from "@/data/tradingPlans";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const TODAY_STR = "2026-05-11";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // All colors are plain hex/rgba — no oklch, no CSS variables, no Tailwind tokens.
@@ -72,7 +71,7 @@ interface Props {
 
 export function CalendarExportView({ exportRef }: Props) {
   const { locale } = useLocale();
-  const { plan } = useTradingPlan();
+  const { plan, selectedPlanContainsToday, todayDateString } = useTradingPlan();
   const { calendar, signalTypes, period, cycleGanzhi } = plan;
 
   const rows = useMemo(() => buildCalendarRows(calendar), [calendar]);
@@ -234,7 +233,7 @@ export function CalendarExportView({ exportRef }: Props) {
                 }
 
                 const day = cell.day;
-                const isToday = cell.dateStr === TODAY_STR;
+                const isToday = selectedPlanContainsToday && cell.dateStr === todayDateString;
                 const c = COLORS[day.type];
                 const tagLabel = signalTypes[day.type].label[locale];
 
